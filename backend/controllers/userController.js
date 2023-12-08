@@ -1,6 +1,9 @@
 const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 const User = require('../models/userModel');
+
 // @desc Register a new user
 // @route /api/users
 // @access Public
@@ -32,10 +35,12 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
-    res.send(201).json({
+    res.status(201);
+    res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
+      token: generateToken(user._id),
     });
   } else {
     res.status(400);
@@ -48,18 +53,17 @@ const registerUser = asyncHandler(async (req, res) => {
 // @access Public
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  console.log('email is', email);
-  console.log('password is', password);
 
   const user = await User.findOne({ email });
-  console.log('user is', user);
 
   // Checks user exists and password matches
   if (user && (await bcrypt.compare(password, user.password))) {
-    res.send(200).json({
+    res.status(200);
+    res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
+      token: generateToken(user._id),
     });
   } else {
     res.status(401);
@@ -67,7 +71,22 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc Get current user
+// @route /api/users/me
+// @access Private
+const getMe = asyncHandler(async (req, res) => {
+  res.send('me');
+});
+
+// Generate token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d',
+  });
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  getMe,
 };
